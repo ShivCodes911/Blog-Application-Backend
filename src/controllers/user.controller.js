@@ -1,7 +1,10 @@
 import userModel from "../models/user.model.js";
-import crypto from "crypto";
+import sessionModel from "../models/session.model.js";
 import bcrypt from "bcrypt";
 import otpModel from "../models/otp.model.js";
+import jwt from "jsonwebtoken";
+import crypto from "crypto"
+
 
 
 import {generateOtp,getOtpHtml} from "../utils/utils.js";
@@ -183,6 +186,93 @@ export const verifyEmail = async (req, res) => {
     });
   }
 };
+
+
+export const login = async (req,res)=>{
+    try {
+      const validationResult=await loginPostRequestBodySchema.safeParseAsync(req.body);
+
+      if(!validationResult.success){
+         return res.status(400).json({
+            status:false,
+            meassge:validationResult.error.message
+         })
+      }
+
+      const {email,password} = validationResult.data
+      const existingUser = await userModel.findOne({email});
+
+      if(!existingUser){
+         return res.status(404).json({
+            status:false,
+            message:"User not Found signUp first "
+         })
+      }
+
+      if(!existingUser.isVerified){
+         return res.status(400).json({
+            status:false,
+            message:"Email not Verified signIn first "
+         })
+      };
+
+      const isMatch=await bcrypt.compare(password,existingUser.password);
+
+      if(!isMatch){
+         return res.status(401).json({
+            status:false,
+            message:"Incorrect Password"
+         })
+      };
+
+
+      const refreshToken=await jwt.sign({id:existingUser._id},process.env.REFRESH_TOKEN_SECRET,{expiresIn:"7d"})
+      
+      const refreshTokenHash=await crypto.createHash("sha256").update(refreshToken).digest("hex");
+
+      const session=await sessionModel.create({
+         userId:existingUser._id,
+         hash:refreshTokenHash,
+         ip:req.ip,
+         userAgent:req.headers["user-agent"],
+         
+      });
+
+      const accessToken=await jwt.sign({id:existingUser._id,sessionId:session._id},process.env.ACCESS_TOKEN_SECRET,{expiresIn:"15m"});
+
+      res.cookie("refreshToken",refreshToken,{
+         httpOnly:true,
+         secure:process.env.NODE_ENV==="production", //true in production
+        sameSite:process.env.NODE_ENV=="production"?"none":"strict",// none in production
+        maxAge:7*24*60*60*1000 //7days in milliseconds
+        });
+      
+
+        return res.status(200).json({
+            status:true,
+            message:"Login Successfull",
+            user:{
+               name:existingUser.name,
+               email:existingUser.email,
+               id:existingUser._id,
+               isVerified:existingUser.isVerified,
+            },
+            token:accessToken,
+        });
+
+      
+
+
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({
+         status:false,
+         message:"Internal Server Error",
+         error:error.message
+      });
+      
+    }
+}
 
 
 
