@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import userRouter from "./routes/user.routes.js"
 
 
 const app = express();
@@ -22,6 +23,8 @@ app.use(cookieParser());
 app.get("/",(req,res)=>{
     res.send("System is Running");
 });
+
+app.use("/api/v1/auth",userRouter);
 
 
 
