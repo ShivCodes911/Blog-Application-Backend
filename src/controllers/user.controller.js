@@ -6,12 +6,7 @@ import otpModel from "../models/otp.model.js";
 
 import {generateOtp,getOtpHtml} from "../utils/utils.js";
 import {sendEmail} from "../services/email.service.js";
-import { signupPostRequestBodySchema } from "../validators/user.validator.js";
-
-
-
-
-
+import { loginPostRequestBodySchema, signupPostRequestBodySchema ,verifyEmailPostRequestBodySchema} from "../validators/user.validator.js";
 
 
 
@@ -84,4 +79,114 @@ export async function signup(req,res){
    })
     
    }
-}
+};
+
+
+export const verifyEmail = async (req, res) => {
+  try {
+    // Validate Request Body
+    const validationResult =
+      await verifyEmailPostRequestBodySchema.safeParseAsync(req.body);
+
+    if (!validationResult.success) {
+      return res.status(400).json({
+        status: false,
+        message: validationResult.error.message,
+      });
+    }
+
+    const { otp, email } = validationResult.data;
+
+    // Hash OTP
+    const otpHash = crypto
+      .createHash("sha256")
+      .update(otp.toString())
+      .digest("hex");
+
+    // Find OTP Document
+    const otpDoc = await otpModel.findOne({
+      email,
+      hashedOtp:otpHash,
+    });
+
+    // Invalid OTP
+    if (!otpDoc) {
+      return res.status(400).json({
+        status: false,
+        message: "Invalid OTP",
+      });
+    }
+
+    // Check OTP Expiry
+    if (otpDoc.expiresAt < new Date()) {
+      await otpModel.deleteMany({ email });
+
+      return res.status(400).json({
+        status: false,
+        message: "OTP Expired",
+      });
+    }
+
+    // Find User
+    const existingUser = await userModel.findById(otpDoc.user);
+
+    if (!existingUser) {
+      return res.status(404).json({
+        status: false,
+        message: "User not found",
+      });
+    }
+
+    // Already Verified
+    if (existingUser.isVerified) {
+      return res.status(400).json({
+        status: false,
+        message: "User already verified",
+      });
+    }
+
+    // Verify User
+    const updatedUser = await userModel.findByIdAndUpdate(
+      otpDoc.user,
+      {
+        isVerified: true,
+      },
+      {
+        new: true,
+      }
+    );
+
+    // Delete all OTPs for user
+    await otpModel.deleteMany({
+      user: otpDoc.user,
+    });
+
+    // Success Response
+    return res.status(200).json({
+      status: true,
+      message: "Email verified successfully",
+      user: {
+        id: updatedUser._id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        isVerified: updatedUser.isVerified,
+      },
+    });
+
+  } catch (error) {
+    console.error("Verify Email Error:", error);
+
+    return res.status(500).json({
+      status: false,
+      message: "Internal Server Error",
+      error: error.message,
+    });
+  }
+};
+
+
+
+
+
+
+
