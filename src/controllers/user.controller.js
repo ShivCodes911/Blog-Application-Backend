@@ -226,9 +226,9 @@ export const login = async (req,res)=>{
       };
 
 
-      const refreshToken=await jwt.sign({id:existingUser._id},process.env.REFRESH_TOKEN_SECRET,{expiresIn:"7d"})
+      const refreshToken= jwt.sign({id:existingUser._id},process.env.REFRESH_TOKEN_SECRET,{expiresIn:"7d"})
       
-      const refreshTokenHash=await crypto.createHash("sha256").update(refreshToken).digest("hex");
+      const refreshTokenHash=  crypto.createHash("sha256").update(refreshToken).digest("hex");
 
       const session=await sessionModel.create({
          userId:existingUser._id,
@@ -238,7 +238,7 @@ export const login = async (req,res)=>{
          
       });
 
-      const accessToken=await jwt.sign({id:existingUser._id,sessionId:session._id},process.env.ACCESS_TOKEN_SECRET,{expiresIn:"15m"});
+      const accessToken= jwt.sign({id:existingUser._id,sessionId:session._id},process.env.ACCESS_TOKEN_SECRET,{expiresIn:"15m"});
 
       res.cookie("refreshToken",refreshToken,{
          httpOnly:true,
@@ -272,6 +272,168 @@ export const login = async (req,res)=>{
       });
       
     }
+}
+
+
+export const refreshToken= async (req,res)=>{
+  try {
+    const refreshToken=req.cookies.refreshToken;
+
+    if(!refreshToken){
+      return res.status(401).json({
+        status:false,
+        message:"You are not logged in"
+      })
+    }
+
+    const decoded = jwt.verify(refreshToken,process.env.REFRESH_TOKEN_SECRET);
+
+    const hashedrefreshToken= crypto.createHash("sha256").update(refreshToken).digest("hex");
+
+    const session = await sessionModel.findOne({
+      hash:hashedrefreshToken,
+      revoked:false
+    });
+
+    if(!session){
+      return res.status(401).json({
+        status:false,
+        message:"Invalid Session or token is revoked"
+      })
+    }
+
+    const accessToken=jwt.sign({id:decoded.id,sessionId:session._id},process.env.ACCESS_TOKEN_SECRET,{expiresIn:"15m"}); 
+    const newRefreshToken= jwt.sign({id:decoded.id},process.env.REFRESH_TOKEN_SECRET,{expiresIn:"7d"});
+
+    const newRefreshTokenHash=crypto.createHash("sha256").update(newRefreshToken).digest("hex");
+
+
+    await sessionModel.findOneAndUpdate(
+      {_id:session._id},
+    {
+      hash:newRefreshTokenHash
+    });
+
+    res.cookie("refreshToken",newRefreshToken,{
+      httpOnly:true,
+      secure:process.env.NODE_ENV==="production",
+      sameSite:process.env.NODE_ENV==="production"?"none":"strict",
+      maxAge:7*24*60*60*1000
+    })
+
+    return res.status(200).json({
+      status:true,
+      message:"Token Refreshed Successfully",
+      token:accessToken,
+    });
+
+
+} catch (error) {
+  console.error(error);
+  return res.status(500).json({
+    status:false,
+    message:"Internal Server Error",
+    error:error.message,
+  });
+    
+  }
+}
+
+
+export const logout=async (req,res)=>{
+
+  try {
+    const refreshToken=req.cookies.refreshToken;
+
+  if(!refreshToken){
+    return res.status(401).json({
+      status:false,
+      message:"You are not logged in"
+    });
+  }
+
+  const hashedrefreshToken=crypto.createHash("sha256").update(refreshToken).digest("hex");
+
+  const session=await sessionModel.findOne({
+    hash:hashedrefreshToken,
+    revoked:false
+  })
+
+  if(!session){
+    return res.status(401).json({
+      status:false,
+      message:"Invalid refresh Token"
+    })
+  }
+
+  session.revoked=true;
+  await session.save();
+
+
+res.clearCookie("refreshToken",{
+   httpOnly:true,
+   secure:process.env.NODE_ENV==="production",
+   sameSite:process.env.NODE_ENV==="production"?"none":"strict",
+});
+
+  return res.status(200).json({
+    status:true,
+    message:"Logged Out Successfully"
+  })
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      status:false,
+      message:"Internal Server Error",
+      error:error.message,
+    })
+  }
+}
+
+
+export const logoutAll=async (req,res)=>{
+  try {
+    const refreshToken=req.cookies.refreshToken;
+
+    if(!refreshToken){
+      return res.status(401).json({
+        status:false,
+        message:"You are not logged in"
+      })
+    }
+
+    const decoded=jwt.verify(refreshToken,process.env.REFRESH_TOKEN_SECRET);
+    
+     await sessionModel.updateMany({
+      userId:decoded.id,
+      revoked:false
+    },{
+      revoked:true
+    });
+
+    res.clearCookie("refreshToken",{
+      httpOnly:true,
+      secure:process.env.NODE_ENV==="production",
+      sameSite:process.env.NODE_ENV==="production"?"none":"strict",
+      maxAge:7*24*60*60*1000
+    })
+
+    return res.status(200).json({
+      status:true,
+      message:"Logged Out of all the devices successfully",
+    })
+    
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      status:false,
+      message:"Internal Server Error",
+      error:error.message,
+    })
+    
+  }
 }
 
 
