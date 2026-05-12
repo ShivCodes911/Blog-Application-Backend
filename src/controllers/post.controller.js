@@ -1,8 +1,9 @@
 
+import { safeParseAsync } from "zod";
 import postModel from "../models/post.model.js";
 
 
-import {createPostRequestBodySchema,getPostByIdSchema} from "../validators/post.validator.js";
+import {createPostRequestBodySchema,getPostByIdSchema, updatePostDataSchema,updatePostIdSchema} from "../validators/post.validator.js";
 
 
 
@@ -120,3 +121,75 @@ export const getPostById=async(req,res)=>{
     }
 }
 
+
+export const updatePost=async(req,res)=>{
+   try {
+     const validationResult=await updatePostIdSchema.safeParseAsync(req.params);
+
+    if(!validationResult.success){
+        return res.status(400).json({
+            status:false,
+            message:"Invalid Id"
+        })
+    }
+
+    const {id}= validationResult.data;
+
+    const validationData=await updatePostDataSchema.safeParseAsync(req.body);
+
+    if(!validationData.success){
+        return res.status(400).json({
+            status:false,
+            message:"Invalid Data"
+        });
+    }
+
+    const {title,content} = validationData.data;
+
+    
+    const post = await postModel.findById(id);
+
+    if(!post){
+        return res.status(404).json({
+            status:false,
+            message:"Post not found !!!"
+        })
+    }
+
+    const authorId=post.author.toString(); 
+    //post declared upper side=>This line converts the post owner's MongoDB ObjectId into a normal string. ✅
+
+    if(authorId!==req.user.id){
+        return res.status(403).json({
+            status:false,
+            message:"You are not authorized to update the post"
+        })
+    }
+
+    const updatedPost=await postModel.findByIdAndUpdate(
+        id
+    ,{
+        title,
+        content
+    },{
+        new:true  // return the updated document instead of old one 
+    });
+
+
+
+    return res.status(200).json({
+        status:true,
+        message:"Post Updated Successfully",
+        updatedPost
+    });
+    
+   } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+        status:false,
+        message:"Internal Server Error"
+    });
+    
+   }
+
+}
