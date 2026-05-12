@@ -52,5 +52,30 @@ export const createPost=async(req,res)=>{
         });
         
     }
+};
+
+export const getAllPost=async(req,res)=>{
+    try {
+        //can't use [allPost] like this bcz it will return only first index of the array rather than all elements(find()=> selct all post at once )
+        
+        const  allPost= await postModel.find().populate("author","name email");  
+       
+// //What populate does
+// Instead of only returning: "author":"userId"(eg:dhfqijfuqfqfu42448) => it fetches related user data also.(name:shiv email:shiv@gmail.com)
+
+        return res.status(200).json({
+            status:true,
+            message:"Here are your all the posts Enjoy !!!",
+            allPost
+        })
+    } catch (error) {
+
+        console.error(error);
+        return res.status(500).json({
+            status:false,
+            message:"Internal server error"
+        })
+        
+    } 
 }
 
