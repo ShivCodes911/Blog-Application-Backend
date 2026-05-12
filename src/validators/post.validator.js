@@ -20,3 +20,7 @@ export const updatePostDataSchema=z.object({
     content:z.string().min(10,"The Content Should be Greater than or equal to 10")
 });
 
+export const deletePostIdSchema=z.object({
+    id:z.string().regex(/^[0-9a-fA-F]{24}$/) 
+});
+
