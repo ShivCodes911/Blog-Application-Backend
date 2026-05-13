@@ -1,5 +1,3 @@
-
-import { safeParseAsync } from "zod";
 import postModel from "../models/post.model.js";
 
 
@@ -238,3 +236,38 @@ export const deletePost=async(req,res)=>{
         });
     }
 };
+
+export const myPost=async(req,res)=>{
+ try{
+     const userId=req.user.id;
+
+     if(!userId){
+        return res.status(400).json({
+            status:false,
+            message:"User not found"
+        })
+     }
+
+     const post = await postModel.find({author:userId});
+
+     if(post.length===0){
+        return res.status(404).json({
+            status:false,
+            message:"No posts have been uploaded !!!"
+        })
+     }
+
+     return res.status(200).json({
+        status:true,
+        message:"Post found",
+        post
+     })
+
+ }catch(error){
+    console.log(error);
+    return res.status(500).json({
+        status:false,
+        message:"Internal server error"
+    })
+ }   
+}
