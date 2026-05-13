@@ -1,7 +1,7 @@
 import postModel from "../models/post.model.js";
 
 
-import {createPostRequestBodySchema,deletePostIdSchema,getPostByIdSchema, updatePostDataSchema,updatePostIdSchema} from "../validators/post.validator.js";
+import {createPostRequestBodySchema,deletePostIdSchema,getPostByIdSchema, updatePostDataSchema,updatePostIdSchema,togglePublishSchema} from "../validators/post.validator.js";
 
 
 
@@ -270,4 +270,51 @@ export const myPost=async(req,res)=>{
         message:"Internal server error"
     })
  }   
+};
+
+export const togglePublish=async(req,res)=>{
+    try {
+        const validationResult=await togglePublishSchema.safeParseAsync(req.params);
+
+        if(!validationResult.success){
+            return res.status(400).json({
+                status:false,
+                message:"Invalid Id"
+            })
+        };
+        const {id}=validationResult.data;
+
+        const post =await postModel.findById(id);
+
+        if(!post){
+            return res.status(404).json({
+                status:false,
+                message:"Post Not Found"
+            })
+        }
+
+        if(post.author.toString()!=req.user.id){
+            return res.status(403).json({
+                status:false,
+                message:"You are not authorized to toggle publish"
+            })
+        }
+
+        post.published=!post.published;
+
+        await post.save();
+
+        return res.status(200).json({
+            status:true,
+            message:post.published?"post published successfully":"post unpublished successfully",
+            post
+        });
+        
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json({
+            status:false,
+            message:"Internal server error"
+        })
+    }
 }
