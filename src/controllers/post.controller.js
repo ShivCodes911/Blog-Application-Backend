@@ -56,17 +56,31 @@ export const createPost=async(req,res)=>{
 
 export const getAllPost=async(req,res)=>{
     try {
+        const page=Number(req.query.page) || 1;
+        const limit=Number(req.query.limit) || 10;
+
+        const skip = (page - 1) * limit;
         //can't use [allPost] like this bcz it will return only first index of the array rather than all elements(find()=> selct all post at once )
 
-        const  allPost= await postModel.find().populate("author","name email");  
+        const  allPost= await postModel.find().populate("author","name email").skip(skip).limit(limit);  
        
 // //What populate does
 // Instead of only returning: "author":"userId"(eg:dhfqijfuqfqfu42448) => it fetches related user data also.(name:shiv email:shiv@gmail.com)
 
+const totalPost=await postModel.countDocuments();
+const totalPage = Math.ceil(totalPost/limit);
+
         return res.status(200).json({
             status:true,
             message:"Here are your all the posts Enjoy !!!",
-            allPost
+             allPost,
+             
+            pagination:{
+            currentPage:page, 
+            totalPage,
+            totalPost,
+              limit,
+            }
         })
     } catch (error) {
 
