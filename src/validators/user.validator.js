@@ -21,3 +21,8 @@ export const verifyEmailPostRequestBodySchema=z.object({
 export const updateCurrentUserRequestBodySchema=z.object({
     updatedName:z.string().nonempty("Name is Required")
 });
+
+export const changePasswordPostBodySchema=z.object({
+oldPassword: z.string().min(6, "password should be greater than 6 characters"),
+newPassword:z.string().min(6, "password should be greater than 6 characters"),
+});

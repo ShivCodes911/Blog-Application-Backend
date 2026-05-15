@@ -9,7 +9,7 @@ import crypto from "crypto"
 
 import {generateOtp,getOtpHtml} from "../utils/utils.js";
 import {sendEmail} from "../services/email.service.js";
-import { loginPostRequestBodySchema, signupPostRequestBodySchema ,verifyEmailPostRequestBodySchema,updateCurrentUserRequestBodySchema} from "../validators/user.validator.js";
+import { loginPostRequestBodySchema, signupPostRequestBodySchema ,verifyEmailPostRequestBodySchema,updateCurrentUserRequestBodySchema, changePasswordPostBodySchema} from "../validators/user.validator.js";
 
 
 
@@ -494,6 +494,57 @@ export const updateCurrentUser=async(req,res)=>{
     })
     
   }
+};
+
+export const changePassword=async(req,res)=>{
+try {
+  const validationResult=await changePasswordPostBodySchema.safeParseAsync(req.body);
+
+  if(!validationResult.success){
+    return res.status(400).json({
+      status:false,
+      message:"password type is Invalid"
+    })
+  }
+
+  const {oldPassword,newPassword} = validationResult.data;
+
+  const user=await userModel.findById(req.user.id);
+
+  if(!user){
+    return res.status(404).json({
+      status:false,
+      message:"User is not authorized ! "
+    })
+  }
+
+ const comparePassword= await bcrypt.compare(oldPassword,user.password);
+
+ if(!comparePassword){
+  return res.status(400).json({
+    status:false,
+    message:"Invalid password, Enter again"
+  })
+ }
+
+ const hashedNewPassword=await bcrypt.hash(newPassword,10);
+
+ user.password=hashedNewPassword;
+ await user.save();
+
+ return res.status(200).json({
+  status:true,
+  message:"Password changed Successfully !!! "
+ })
+} catch (error) {
+  console.error(error);
+  return res.status(500).json({
+    status:false,
+    message:"Internal Server Error !! "
+  })
+  
+}
+
 }
 
 
