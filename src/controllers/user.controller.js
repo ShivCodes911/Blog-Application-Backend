@@ -434,6 +434,26 @@ export const logoutAll=async (req,res)=>{
     })
     
   }
+};
+
+
+export const getCurrentUser=async(req,res)=>{
+  try {
+    const user=await userModel.findById(req.user.id).select("-password"); // "-paasword"=> exclude password and select
+
+    return res.status(200).json({
+      status:true,
+      message:"Here are you details",
+      user
+    })
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      status:false,
+      message:"Internal Server Error"
+    })
+    
+  }
 }
 
 
