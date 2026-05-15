@@ -56,4 +56,42 @@ export  const toggleLike= async(req,res)=>{
         })
         
     }
+};
+
+export const getLikeCount=async(req,res)=>{
+    try {
+        const validationResult=await postIdSchema.safeParseAsync(req.params);
+
+        if(!validationResult.success){
+            return res.status(400).json({
+                status:false,
+                message:"Post Id is Invalid"
+            })
+        }
+
+        const {id} = validationResult.data;
+        const post = await postModel.findById(id);
+
+        if(!post){
+            return res.status(404).json({
+                status:false,
+                message:"Post Does Not Exist !"
+            })
+        }
+
+        const likeCount=await likeModel.countDocuments({post:id});
+
+        return res.status(200).json({
+            status:true,
+            message:"Total Likes are : ",
+            likeCount
+        })
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status:false,
+            message:"Internal Server Error"
+        })
+        
+    }
 }
