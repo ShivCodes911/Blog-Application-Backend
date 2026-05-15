@@ -133,4 +133,29 @@ export const checkUserLikedPost=async(req,res)=>{
         })
         
     }
+};
+
+export const getAllLikedPosts=async(req,res)=>{
+    try {
+      const myLikedPosts=await likeModel.find({user: req.user.id}).populate("post");
+
+       //Find all Like documents where user equals logged-in user,
+       // then replace post id with actual post data.
+
+      return res.status(200).json({
+        status:true,
+        message:"Your Liked Posts",
+        myLikedPosts,
+       
+      })
+
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status:false,
+            message:"Internal Server Error "
+        })
+        
+    }
 }
