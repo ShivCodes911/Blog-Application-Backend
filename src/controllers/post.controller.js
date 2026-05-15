@@ -56,9 +56,13 @@ export const createPost=async(req,res)=>{
 
 export const getAllPost=async(req,res)=>{
     try {
+        //pagination
         const page=Number(req.query.page) || 1;
         const limit=Number(req.query.limit) || 10;
+        //searching
         const search = req.query.search || "";
+        //sorting
+        const sort=req.query.sort || "latest"; // by default user should see latest post 
 
         const skip = (page - 1) * limit;
         //can't use [allPost] like this bcz it will return only first index of the array rather than all elements(find()=> selct all post at once )
@@ -66,7 +70,16 @@ export const getAllPost=async(req,res)=>{
             $or:[{title:{$regex:search,$options:"i"}},{content:{$regex:search,$options:"i"}}]
         }
 
-        const  allPost= await postModel.find(filter).populate("author","name email").skip(skip).limit(limit);  
+        let sortOptions={}; // using let =>  bcz i have to change its assign value
+        if(sort==="latest"){
+            sortOptions ={createdAt: -1};
+        }
+
+        else if(sort==="oldest"){
+            sortOptions={createdAt: 1};
+         }
+
+        const  allPost= await postModel.find(filter).sort(sortOptions).skip(skip).limit(limit).populate("author","name email");  
 
             //"regex=> Find titles containing search keyword  & "i" = Ignore uppercase/lowercase 
        
