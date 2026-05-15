@@ -1,0 +1,59 @@
+import likeModel from "../models/like.model.js";
+import postModel from "../models/post.model.js";
+import userModel  from "../models/user.model.js";
+
+import { postIdSchema } from "../validators/comment.validator.js";
+
+
+export  const toggleLike= async(req,res)=>{
+    try {
+        const validationResult=await postIdSchema.safeParseAsync(req.params);
+
+        if(!validationResult.success){
+            return res.status(400).json({
+                status:false,
+                message:"Post Id is Invalid!!"
+            })
+        }
+
+        const {id}=validationResult.data;
+
+        const post =await postModel.findById(id);
+
+        if(!post){
+            return res.status(404).json({
+                status:false,
+                message:"Post Does Not Exist ! "
+            })
+        }
+
+       
+
+        const existingLike=await likeModel.findOne({user:req.user.id,post:id});
+
+        if(existingLike){
+            const unlike = await likeModel.findByIdAndDelete(existingLike._id);
+            return res.status(200).json({
+                status:true,
+                message:"You disliked this post !"
+            })
+        }
+
+        const like=await likeModel.create({
+            user:req.user.id,
+            post:id
+        });
+
+        return res.status(200).json({
+            status:true,
+            message:"You liked this Post !"
+        })
+} catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status:false,
+            message:"Internal Server Error "
+        })
+        
+    }
+}

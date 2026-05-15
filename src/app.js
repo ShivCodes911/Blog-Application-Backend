@@ -4,6 +4,7 @@ import cookieParser from "cookie-parser";
 import userRouter from "./routes/user.routes.js";
 import postRouter from "./routes/post.routes.js" ;
 import commentRouter from "./routes/comment.routes.js";
+import likeRouter from "./routes/like.routes.js";
 
 
 const app = express();
@@ -28,7 +29,8 @@ app.get("/",(req,res)=>{
 
 app.use("/api/v1/auth",userRouter);
 app.use("/api/v1/post",postRouter);
-app.use("/api/v1/posts",commentRouter);
+app.use("/api/v1/post",commentRouter);
+app.use("/api/v1/post",likeRouter);
 
 
 
