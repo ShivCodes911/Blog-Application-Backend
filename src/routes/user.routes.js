@@ -1,7 +1,8 @@
 import express from "express";
 
-import { signup, verifyEmail,login, refreshToken ,logout,logoutAll, getCurrentUser} from "../controllers/user.controller.js";
+import { signup, verifyEmail,login, refreshToken ,logout,logoutAll, getCurrentUser,updateCurrentUser} from "../controllers/user.controller.js";
 import { UserAuthMidlleware } from "../middlewares/auth.middleware.js";
+import userModel from "../models/user.model.js";
 
 
 
@@ -19,5 +20,7 @@ router.post("/logout",UserAuthMidlleware,logout);
 router.post("/logout-all",UserAuthMidlleware,logoutAll); 
 
 router.get("/me",UserAuthMidlleware,getCurrentUser);
+
+router.patch("/me",UserAuthMidlleware,updateCurrentUser);
 
 export default router;

@@ -17,3 +17,7 @@ export const verifyEmailPostRequestBodySchema=z.object({
     otp:z.string().length(6,"Otp must be of 6 digits"),
     email:z.string().email()
 }) 
+
+export const updateCurrentUserRequestBodySchema=z.object({
+    updatedName:z.string().nonempty("Name is Required")
+});

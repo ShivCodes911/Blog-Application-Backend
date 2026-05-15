@@ -9,7 +9,7 @@ import crypto from "crypto"
 
 import {generateOtp,getOtpHtml} from "../utils/utils.js";
 import {sendEmail} from "../services/email.service.js";
-import { loginPostRequestBodySchema, signupPostRequestBodySchema ,verifyEmailPostRequestBodySchema} from "../validators/user.validator.js";
+import { loginPostRequestBodySchema, signupPostRequestBodySchema ,verifyEmailPostRequestBodySchema,updateCurrentUserRequestBodySchema} from "../validators/user.validator.js";
 
 
 
@@ -446,6 +446,46 @@ export const getCurrentUser=async(req,res)=>{
       message:"Here are you details",
       user
     })
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      status:false,
+      message:"Internal Server Error"
+    })
+    
+  }
+};
+
+export const updateCurrentUser=async(req,res)=>{
+  try {
+    const validationResult=await updateCurrentUserRequestBodySchema.safeParseAsync(req.body);
+
+    if(!validationResult.success){
+      return res.status(400).json({
+        status:false,
+        message:"Body is Invalid"
+      })
+    }
+    const {updatedName}=validationResult.data;
+
+    const user = await userModel.findById(req.user.id);
+
+    if(!user){
+      return res.status(404).json({
+        status:false,
+        message:"User is not authorized"
+      })
+    }
+
+    user.name=updatedName;
+    await user.save();
+
+    return res.status(200).json({
+      status:true,
+      message:"User Name has Been Updated Succesfully !",
+      updatedName
+    })
+
   } catch (error) {
     console.error(error);
     return res.status(500).json({
