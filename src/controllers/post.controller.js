@@ -66,6 +66,9 @@ export const getAllPost=async(req,res)=>{
 
         const skip = (page - 1) * limit;
         //can't use [allPost] like this bcz it will return only first index of the array rather than all elements(find()=> selct all post at once )
+
+
+        //introducing filtering
         const filter ={
             $or:[{title:{$regex:search,$options:"i"}},{content:{$regex:search,$options:"i"}}]
         }

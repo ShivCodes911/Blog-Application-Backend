@@ -62,4 +62,67 @@ export const comments=async(req ,res)=>{
 
         
     }
+};
+
+export const getPostComments=async(req,res)=>{
+    try {
+        const validationResult= await postIdSchema.safeParseAsync(req.params);
+
+    if(!validationResult.success){
+        return res.status(400).json({
+            status:false,
+            message:"Post ID Invalid !!"
+        })
+    }
+    const {id}=validationResult.data;
+
+    const postExist=await postModel.findById(id);
+    if(!postExist){
+        return res.status(404).json({
+            status:false,
+            message:"Post Does not Exist!"
+        })
+    }
+  
+    //pagination introduction 
+    const page=Number(req.query.page) || 1;
+    const limit=Number(req.query.limit) || 10;
+    //skip formula 
+    const skip=(page-1) * limit;
+
+    const postComment = await commentModel.find({post:id}).sort({createdAt:-1}).skip(skip).limit(limit).populate("author","name");
+
+    const totalItems=await commentModel.countDocuments({post:id});
+    const totalPages= Math.ceil(totalItems/limit);
+
+
+    if(postComment.length===0){
+        return res.status(404).json({
+            status:false,
+            message:"Post Does not have any Comment!"
+        })
+    }
+
+    return res.status(200).json({
+        status:true,
+        message:"HEre all your comments",
+        postComment,
+
+        pagination:{
+            currentPage:page,
+            totalItems,
+            totalPages,
+            limit
+        }
+    })
+
+ } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status:false,
+            message:"Internal Server Error !!"
+        })
+        
+    }
+
 }
