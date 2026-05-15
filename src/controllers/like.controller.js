@@ -94,4 +94,43 @@ export const getLikeCount=async(req,res)=>{
         })
         
     }
+};
+
+export const checkUserLikedPost=async(req,res)=>{
+    try {
+        const validationResult=await postIdSchema.safeParseAsync(req.params);
+
+        if(!validationResult.success){
+            return res.status(400).json({
+                status:false,
+                message:"Post ID is Invalid ! "
+            })
+        }
+
+        const {id}= validationResult.data;
+
+        const post = await postModel.findById(id);
+
+        if(!post){
+            return res.status(404).json({
+                status:false,
+                message:"Post does not Exists "
+            })
+        }
+
+        const UserLikedPost=await likeModel.findOne({user:req.user.id,post:id})
+
+        return res.status(200).json({
+            status:true,
+            liked: !!UserLikedPost // !!=> used to create any value into boolean
+        })
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status:false,
+            message:"Internal Server Error"
+        })
+        
+    }
 }
