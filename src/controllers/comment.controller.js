@@ -185,4 +185,49 @@ export const updateComment=async(req,res)=>{
         })
         
     }
+};
+
+export const deleteComment=async(req,res)=>{
+    try {
+        const validationResult=await commentIdSchema.safeParseAsync(req.params);
+
+        if(!validationResult.success){
+            return res.status(400).json({
+                status:false,
+                message:"Invalid Comment Id"
+            })
+        }
+
+        const {id} = validationResult.data;
+
+        const comment=await commentModel.findById(id);
+
+        if(!comment){
+            return res.status(404).json({
+                status:false,
+                message:"There is no such comment"
+            })
+        }
+
+        if(comment.author.toString()!==req.user.id){
+            return res.status(403).json({
+                status:false,
+                message:"You are not authorized !!"
+            })
+        }
+
+        await commentModel.findByIdAndDelete(id);
+
+        return res.status(200).json({
+            status:true,
+            message:"Comment Deleted Successfully !! "
+        })
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status:false,
+            message:"Internal Server Error"
+        })
+        
+    }
 }
