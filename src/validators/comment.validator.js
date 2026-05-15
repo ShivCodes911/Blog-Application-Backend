@@ -7,3 +7,7 @@ export const commentPostBodySchema=z.object({
 export const postIdSchema=z.object({
    id:z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid post ID")
 }); 
+
+export const commentIdSchema=z.object({
+   id:z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid comment ID")
+});

@@ -1,7 +1,7 @@
 import commentModel from "../models/comment.model.js";
 import userModel from "../models/user.model.js";
 import postModel from "../models/post.model.js";
-import { commentPostBodySchema, postIdSchema } from "../validators/comment.validator.js";
+import { commentIdSchema, commentPostBodySchema, postIdSchema } from "../validators/comment.validator.js";
 
 
 
@@ -125,4 +125,64 @@ export const getPostComments=async(req,res)=>{
         
     }
 
+};
+
+
+export const updateComment=async(req,res)=>{
+    try {
+        const validationResult=await commentIdSchema.safeParseAsync(req.params);
+
+        if(!validationResult.success){
+            return res.status(400).json({
+                status:false,
+                message:"Comment Id is Invalid !"
+            })
+        }
+       
+        const {id} = validationResult.data;
+
+        const validationData = await commentPostBodySchema.safeParseAsync(req.body);
+
+        if(!validationData.success){
+            return res.status(400).json({
+                status:false,
+                message:"Write the Content Properly !!!"
+            })
+        }
+
+        const {content}= validationData.data;
+
+        const comment=await commentModel.findById(id);
+
+        if(!comment){
+            return res.status(404).json({
+                status:false,
+                message:"Comment not found !!!"
+            })
+        }
+
+        if(comment.author.toString()!==req.user.id){
+        return res.status(403).json({
+            status:false,
+            message:"You are not authorized to update the comment"
+        })
+            
+        }
+
+       comment.content=content;
+       await comment.save();
+
+
+        return res.status(200).json({
+            status:true,
+            message:"Comment Updated Successfully !!!"
+        })
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status:false,
+            message:"Internal Server Error !!!"
+        })
+        
+    }
 }
