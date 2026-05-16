@@ -1,8 +1,8 @@
 import express from "express";
 
-import { signup, verifyEmail,login, refreshToken ,logout,logoutAll, getCurrentUser,updateCurrentUser,changePassword} from "../controllers/user.controller.js";
+import { signup, verifyEmail,login, refreshToken ,logout,logoutAll, getCurrentUser,updateCurrentUser,changePassword, forgetPassword,resetPassword} from "../controllers/user.controller.js";
 import { UserAuthMidlleware } from "../middlewares/auth.middleware.js";
-import userModel from "../models/user.model.js";
+
 
 
 
@@ -24,5 +24,9 @@ router.get("/me",UserAuthMidlleware,getCurrentUser);
 router.patch("/me",UserAuthMidlleware,updateCurrentUser);
 
 router.patch("/change-password", UserAuthMidlleware, changePassword);
+
+router.post("/forget-password",forgetPassword);
+
+router.post("/reset-password", resetPassword);
 
 export default router;

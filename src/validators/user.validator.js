@@ -26,3 +26,13 @@ export const changePasswordPostBodySchema=z.object({
 oldPassword: z.string().min(6, "password should be greater than 6 characters"),
 newPassword:z.string().min(6, "password should be greater than 6 characters"),
 });
+
+export const forgotPasswordEmailBodySchema=z.object({
+    email:z.string().email()
+});
+
+export const resetPasswordBodySchema=z.object({
+    email:z.string().email(),
+    otp:z.string().length(6,"OTP must be 6 digits long"),
+    newPassword:z.string().min(3,"password must be more than or equal to 3 digits")
+});

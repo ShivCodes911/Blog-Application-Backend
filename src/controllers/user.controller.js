@@ -9,7 +9,8 @@ import crypto from "crypto"
 
 import {generateOtp,getOtpHtml} from "../utils/utils.js";
 import {sendEmail} from "../services/email.service.js";
-import { loginPostRequestBodySchema, signupPostRequestBodySchema ,verifyEmailPostRequestBodySchema,updateCurrentUserRequestBodySchema, changePasswordPostBodySchema} from "../validators/user.validator.js";
+import { loginPostRequestBodySchema, signupPostRequestBodySchema ,verifyEmailPostRequestBodySchema,updateCurrentUserRequestBodySchema, changePasswordPostBodySchema, forgotPasswordEmailBodySchema, resetPasswordBodySchema} from "../validators/user.validator.js";
+import { superRefine } from "zod";
 
 
 
@@ -259,10 +260,6 @@ export const login = async (req,res)=>{
             },
             token:accessToken,
         });
-
-      
-
-
     } catch (error) {
       console.error(error);
       return res.status(500).json({
@@ -545,6 +542,137 @@ try {
   
 }
 
+};
+
+export const forgetPassword=async(req,res)=>{
+  try {
+    const validationResult=await forgotPasswordEmailBodySchema.safeParseAsync(req.body);
+
+    if(!validationResult.success){
+      return res.status(400).json({
+        status:false,
+        message:"Enter valid Email"
+      })
+    }
+
+    const {email}=validationResult.data;
+
+    const user = await userModel.findOne({email});
+
+    if(!user){
+      return res.status(404).json({
+        status:false,
+        message:"User not found, please signup"
+      })
+    }
+
+    const otp=generateOtp();
+    const html=getOtpHtml(otp);
+
+    const hashedOtp = crypto.createHash("sha256").update(otp).digest("hex");
+
+    await otpModel.deleteMany({  //=> remove old reset OTPs
+   email, 
+   purpose:"password-reset"
+});
+
+    await otpModel.create({  //=> create only one fresh OTP
+      email,
+      hashedOtp,
+      user:user._id,
+      purpose:"password-reset"
+    });
+
+    await sendEmail(email,"Password Reset OTP",`Your Otp is ${otp} for next 10 min`,html);
+
+    return res.status(200).json({
+        status:"success",
+        msg:"Password reset OTP sent successfully",
+        user:{
+            name:user.name,
+            email:user.email,
+            Verified:user.isVerified,
+        },
+      });
+
+
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      status:false,
+      message:"Internal Server Error"
+    })
+    
+  }
+};
+
+export const resetPassword=async(req,res)=>{
+  try {
+    const validationResult=await resetPasswordBodySchema.safeParseAsync(req.body);
+
+    if(!validationResult.success){
+      return res.status(400).json({
+        status:false,
+        message:"Enter the credential Properly"
+      })
+    }
+
+    const {email,otp,newPassword}=validationResult.data;
+
+    const hashedOtp= crypto.createHash("sha256").update(otp).digest("hex");
+
+    const otpDoc = await otpModel.findOne({
+      email,
+      hashedOtp,
+      purpose:"password-reset"
+    })
+
+    if(!otpDoc){
+      return res.status(400).json({
+        status:false,
+        message:"Email or Otp is Incorrect"
+      })
+    }
+
+    if(otpDoc.expiresAt < new Date()){
+
+        await otpModel.deleteOne({_id:otpDoc._id});  // this delete expire otp
+
+      return res.status(400).json({
+        status:false,
+        message:"Otp expired & Enter again"
+      })
+    }
+  const user = await userModel.findOne({email});
+    if(!user){
+      return res.status(404).json({
+        status:false,
+        message:"User does Not Exist"
+
+      })
+    }
+
+    const hashedPassword=await bcrypt.hash(newPassword,10);
+
+    user.password=hashedPassword;
+    await user.save();
+
+     await otpModel.deleteOne({_id:otpDoc._id}); 
+     
+     return res.status(200).json({
+      status:true,
+      message:"Password Reset Succesfully "
+    })
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      status:false,
+      message:"Internal Server Error ! "
+    })
+    
+  }
 }
 
 
