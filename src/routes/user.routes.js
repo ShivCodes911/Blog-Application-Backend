@@ -1,7 +1,9 @@
 import express from "express";
 
-import { signup, verifyEmail,login, refreshToken ,logout,logoutAll, getCurrentUser,updateCurrentUser,changePassword, forgetPassword,resetPassword} from "../controllers/user.controller.js";
+import { signup, verifyEmail,login, refreshToken ,logout,logoutAll, getCurrentUser,updateCurrentUser,changePassword, forgetPassword,resetPassword,profileImageUpload} from "../controllers/user.controller.js";
 import { UserAuthMidlleware } from "../middlewares/auth.middleware.js";
+
+import {upload} from "../middlewares/upload.middleware.js";
 
 
 
@@ -28,5 +30,13 @@ router.patch("/change-password", UserAuthMidlleware, changePassword);
 router.post("/forget-password",forgetPassword);
 
 router.post("/reset-password", resetPassword);
+
+router.patch("/me/profile-image",UserAuthMidlleware,upload.single("profileImage"),profileImageUpload);
+
+//Accept ONE uploaded file
+// whose form-data key is "profileImage"
+
+
+
 
 export default router;

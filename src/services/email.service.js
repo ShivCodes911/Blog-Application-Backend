@@ -17,7 +17,7 @@ const transporter=nodemailer.createTransport({
 
 transporter.verify((error,success)=>{
     if(error){
-        console.error("Error in connecting the Email server")
+        console.error("Error in connecting the Email server",error);
     }else{
         console.log("Email server is Ready to sent the verification message");
     }

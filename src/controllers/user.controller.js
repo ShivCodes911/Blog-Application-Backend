@@ -4,13 +4,15 @@ import bcrypt from "bcrypt";
 import otpModel from "../models/otp.model.js";
 import jwt from "jsonwebtoken";
 import crypto from "crypto"
+import streamifier from "streamifier";
 
 
 
 import {generateOtp,getOtpHtml} from "../utils/utils.js";
 import {sendEmail} from "../services/email.service.js";
 import { loginPostRequestBodySchema, signupPostRequestBodySchema ,verifyEmailPostRequestBodySchema,updateCurrentUserRequestBodySchema, changePasswordPostBodySchema, forgotPasswordEmailBodySchema, resetPasswordBodySchema} from "../validators/user.validator.js";
-import { superRefine } from "zod";
+import cloudinary from "../config/cloudinary.config.js";
+
 
 
 
@@ -546,7 +548,7 @@ try {
 
 export const forgetPassword=async(req,res)=>{
   try {
-    const validationResult=await forgotPasswordEmailBodySchema.safeParseAsync(req.body);
+    const validationResult= await forgotPasswordEmailBodySchema.safeParseAsync(req.body);
 
     if(!validationResult.success){
       return res.status(400).json({
@@ -576,7 +578,7 @@ export const forgetPassword=async(req,res)=>{
    purpose:"password-reset"
 });
 
-    await otpModel.create({  //=> create only one fresh OTP
+  await otpModel.create({  //=> create only one fresh OTP
       email,
       hashedOtp,
       user:user._id,
@@ -595,9 +597,7 @@ export const forgetPassword=async(req,res)=>{
         },
       });
 
-
-
-  } catch (error) {
+    } catch (error) {
     console.error(error);
     return res.status(500).json({
       status:false,
@@ -673,11 +673,68 @@ export const resetPassword=async(req,res)=>{
     })
     
   }
+};
+
+export const profileImageUpload = async(req,res)=>{
+   try {
+
+      if(!req.file){
+         return res.status(400).json({
+            status:false,
+            message:"Image file is required"
+         });
+      }
+
+      const result = await new Promise((resolve,reject)=>{
+
+         const stream = cloudinary.uploader.upload_stream(
+            {
+               folder:"profile-images"
+            },
+            (error,result)=>{
+
+               if(error){
+                  reject(error);
+               }else{
+                  resolve(result);
+               }
+
+            }
+         );
+
+         streamifier
+            .createReadStream(req.file.buffer)
+            .pipe(stream);
+
+      });
+
+      const user = await userModel.findById(req.user.id);
+
+      if(!user){
+         return res.status(404).json({
+            status:false,
+            message:"User not found"
+         });
+      }
+
+      user.profileImage = result.secure_url;
+
+      await user.save();
+
+      return res.status(200).json({
+         status:true,
+         message:"Profile image uploaded successfully",
+         profileImage:user.profileImage
+      });
+
+   } catch (error) {
+
+      console.error(error);
+
+      return res.status(500).json({
+         status:false,
+         message:"Internal Server Error"
+      });
+
+   }
 }
-
-
-
-
-
-
-
