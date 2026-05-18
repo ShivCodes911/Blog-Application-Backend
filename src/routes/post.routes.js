@@ -1,7 +1,8 @@
 import express from "express";
 
 import { UserAuthMidlleware } from "../middlewares/auth.middleware.js";
-import { createPost,getAllPost,getPostById, updatePost ,deletePost ,myPost,togglePublish} from "../controllers/post.controller.js";
+import { createPost,getAllPost,getPostById, updatePost ,deletePost ,myPost,togglePublish,uploadPostCoverImage} from "../controllers/post.controller.js";
+import {upload} from "../middlewares/upload.middleware.js";
 
 const router = express.Router();
 
@@ -17,6 +18,8 @@ router.delete("/:id",UserAuthMidlleware,deletePost);
 router.get("/me/post",UserAuthMidlleware,myPost);
 
 router.patch("/publish/:id",UserAuthMidlleware,togglePublish);
+
+router.patch("/:id/cover-image",UserAuthMidlleware,upload.single("coverImage"),uploadPostCoverImage);
 
 
 

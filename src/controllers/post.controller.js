@@ -1,7 +1,9 @@
+import cloudinary from "../config/cloudinary.config.js";
 import postModel from "../models/post.model.js";
+import streamifier from "streamifier"
 
 
-import {createPostRequestBodySchema,deletePostIdSchema,getPostByIdSchema, updatePostDataSchema,updatePostIdSchema,togglePublishSchema} from "../validators/post.validator.js";
+import {createPostRequestBodySchema,deletePostIdSchema,getPostByIdSchema, updatePostDataSchema,updatePostIdSchema,togglePublishSchema, validatePostIdSchema} from "../validators/post.validator.js";
 
 
 
@@ -355,4 +357,78 @@ export const togglePublish=async(req,res)=>{
             message:"Internal server error"
         })
     }
-}
+};
+
+export const uploadPostCoverImage=async(req,res)=>{
+    try {
+        if(!req.file){
+            return res.status(400).json({
+                status:false,
+                message:"Image File Is required"
+            })
+        }
+ 
+        const validationResult=await validatePostIdSchema.safeParseAsync(req.params);
+
+        if(!validationResult.success){
+            return res.status(400).json({
+                status:false,
+                message:"Invalid Post Id"
+            })
+        }
+        const {id}=validationResult.data;
+
+        const post =await postModel.findById(id);
+
+        if(!post){
+            return res.status(404).json({
+                status:false,
+                message:"Post not found "
+            })
+        }
+
+        if(post.author.toString()!==req.user.id){
+            return res.status(403).json({
+                status:false,
+                message:"User is unauthorized"
+            })
+        }
+
+        const result=await new Promise ((resolve,reject)=>{
+
+            const stream=cloudinary.uploader.upload_stream(
+                {
+                    folder:"post-cover-image"
+                },
+                (error,result)=>{
+                    if(error){
+                        reject(error)
+                    }else{
+                        resolve(result)
+                    }
+                }
+            );
+
+            streamifier.createReadStream(req.file.buffer).pipe(stream);
+        })
+
+        post.coverImage=result.secure_url;
+        await post.save();
+
+
+        return res.status(200).json({
+            status:true,
+            message:"Cover Image uploaded Successfully",
+            coverImage:post.coverImage
+        })
+
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status:false,
+            message:"Internal Server Error"
+        })
+        
+    }
+};

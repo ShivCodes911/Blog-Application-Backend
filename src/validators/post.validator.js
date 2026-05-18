@@ -28,3 +28,7 @@ export const togglePublishSchema=z.object({
     id:z.string().regex(/^[0-9a-fA-F]{24}$/) 
 });
 
+export const validatePostIdSchema=z.object({
+    id:z.string().regex(/^[0-9a-fA-F]{24}$/)
+});
+
