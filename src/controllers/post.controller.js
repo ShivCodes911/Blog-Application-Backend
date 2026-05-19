@@ -260,6 +260,12 @@ export const deletePost=async(req,res)=>{
             })
         }
 
+        const oldPublicId=post.coverImage?.public_id;
+
+        if(oldPublicId){
+            await cloudinary.uploader.destroy(oldPublicId);
+        }
+
         await postModel.findByIdAndDelete(id);
 
         return res.status(200).json({
@@ -517,4 +523,5 @@ export const updatedPostCoverImage=async(req,res)=>{
             message:"Internal Server Error !"
         })
     }
-}
+};
+
