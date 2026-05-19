@@ -1,7 +1,7 @@
 import express from "express";
 
 import { UserAuthMidlleware } from "../middlewares/auth.middleware.js";
-import { createPost,getAllPost,getPostById, updatePost ,deletePost ,myPost,togglePublish,uploadPostCoverImage} from "../controllers/post.controller.js";
+import { createPost,getAllPost,getPostById, updatePost ,deletePost ,myPost,togglePublish,uploadPostCoverImage,updatedPostCoverImage} from "../controllers/post.controller.js";
 import {upload} from "../middlewares/upload.middleware.js";
 
 const router = express.Router();
@@ -19,7 +19,10 @@ router.get("/me/post",UserAuthMidlleware,myPost);
 
 router.patch("/publish/:id",UserAuthMidlleware,togglePublish);
 
+
 router.patch("/:id/cover-image",UserAuthMidlleware,upload.single("coverImage"),uploadPostCoverImage);
+router.patch("/:id/newcover-image",UserAuthMidlleware,upload.single("coverImage"),updatedPostCoverImage);
+
 
 
 

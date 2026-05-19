@@ -717,7 +717,10 @@ export const profileImageUpload = async(req,res)=>{
          });
       }
 
-      user.profileImage = result.secure_url;
+      user.profileImage = {
+        url:result.secure_url,
+        public_id:result.public_id
+      }
 
       await user.save();
 
@@ -737,4 +740,67 @@ export const profileImageUpload = async(req,res)=>{
       });
 
    }
+};
+
+export const newProfileImage=async(req,res)=>{
+  try {
+    if(!req.file){
+      return res.status(400).json({
+        status:false,
+        message:"No file in input"
+      })
+    }
+
+    const result=await new Promise((resolve,reject)=>{
+
+      const stream=cloudinary.uploader.upload_stream(
+        {
+        folder:"profile-images"
+      },
+      (error,result)=>{
+        if(error){
+          reject(error)
+        }else{
+          resolve(result)
+        }
+      }
+    );
+
+    streamifier.createReadStream(req.file.buffer).pipe(stream);
+
+    });
+    const user = await userModel.findById(req.user.id);
+
+      if(!user){
+         return res.status(404).json({
+            status:false,
+            message:"User not found"
+         });
+      }
+
+    const oldPublicId= user.profileImage?.public_id;
+
+    if(oldPublicId){
+     await cloudinary.uploader.destroy(oldPublicId);
+    }
+
+    user.profileImage={
+      url:result.secure_url,
+      public_id:result.public_id
+    }
+    await user.save();
+
+    return res.status(200).json({
+      status:true,
+      message:"Profile picture updated successfully",
+      profileImage:user.profileImage
+
+    });
+} catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      status:false,
+      message:"Internal Server error "
+    })
+  }
 }

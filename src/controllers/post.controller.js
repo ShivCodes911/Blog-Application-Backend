@@ -412,7 +412,11 @@ export const uploadPostCoverImage=async(req,res)=>{
             streamifier.createReadStream(req.file.buffer).pipe(stream);
         })
 
-        post.coverImage=result.secure_url;
+        post.coverImage={
+            url:result.secure_url,
+            public_id:result.public_id
+        }
+        
         await post.save();
 
 
@@ -432,3 +436,85 @@ export const uploadPostCoverImage=async(req,res)=>{
         
     }
 };
+
+export const updatedPostCoverImage=async(req,res)=>{
+    try {
+
+        if(!req.file){
+            return res.status(400).json({
+                status:false,
+                message:"input file required !"
+            })
+        }
+            const validationResult=await validatePostIdSchema.safeParseAsync(req.params);
+
+            if(!validationResult.success){
+                return res.status(400).json({
+                    status:false,
+                    message:"Enter valid post Id"
+                })
+            }
+
+            const {id}=validationResult.data;
+
+            const post=await postModel.findById(id);
+
+            if(!post){
+                return res.status(404).json({
+                    status:false,
+                    message:"Post not found"
+                })
+            }
+
+            if(post.author.toString()!==req.user.id){
+                return res.status(403).json({
+                    status:false,
+                    message:"User is not Authorized"
+                })
+            }
+            
+            const result=await new Promise((resolve,reject)=>{
+
+                const stream= cloudinary.uploader.upload_stream(
+                    {
+                    folder:"post-cover-image"
+                },
+                (error,result)=>{
+                    if(error){
+                        reject(error)
+                    }else{
+                        resolve(result)
+                    }
+                }
+            )
+
+            streamifier.createReadStream(req.file.buffer).pipe(stream);
+            })
+
+            const oldPublicId=  post.coverImage?.public_id;
+
+            if(oldPublicId){
+                await cloudinary.uploader.destroy(oldPublicId)
+            }
+
+            post.coverImage={
+                url:result.secure_url,
+                public_id:result.public_id
+            }
+
+            await post.save();
+
+            return res.status(200).json({
+                status:true,
+                message:"Cover Image update successfully !",
+                coverImage:post.coverImage
+            })
+        
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            status:false,
+            message:"Internal Server Error !"
+        })
+    }
+}
