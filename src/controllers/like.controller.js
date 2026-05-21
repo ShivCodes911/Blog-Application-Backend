@@ -32,14 +32,14 @@ export  const toggleLike= async(req,res)=>{
         const existingLike=await likeModel.findOne({user:req.user.id,post:id});
 
         if(existingLike){
-            const unlike = await likeModel.findByIdAndDelete(existingLike._id);
+             await likeModel.findByIdAndDelete(existingLike._id);
             return res.status(200).json({
                 status:true,
                 message:"You disliked this post !"
             })
         }
 
-        const like=await likeModel.create({
+        await likeModel.create({
             user:req.user.id,
             post:id
         });

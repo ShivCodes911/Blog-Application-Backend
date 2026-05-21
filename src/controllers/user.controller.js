@@ -12,6 +12,10 @@ import {generateOtp,getOtpHtml} from "../utils/utils.js";
 import {sendEmail} from "../services/email.service.js";
 import { loginPostRequestBodySchema, signupPostRequestBodySchema ,verifyEmailPostRequestBodySchema,updateCurrentUserRequestBodySchema, changePasswordPostBodySchema, forgotPasswordEmailBodySchema, resetPasswordBodySchema} from "../validators/user.validator.js";
 import cloudinary from "../config/cloudinary.config.js";
+import postModel from "../models/post.model.js";
+import commentModel from "../models/comment.model.js";
+import bookmarkModel from "../models/bookmark.model.js";
+import likeModel from "../models/like.model.js";
 
 
 
@@ -60,7 +64,8 @@ export async function signup(req,res){
      await otpModel.create({
         email,
         hashedOtp,
-        user:user._id
+        user:user._id,
+        purpose:"email-verification"
      })
 
      await sendEmail(email,"OTP verification",`Your Otp code is ${otp} for 10 min`,html);
@@ -215,7 +220,7 @@ export const login = async (req,res)=>{
       if(!existingUser.isVerified){
          return res.status(400).json({
             status:false,
-            message:"Email not Verified signIn first "
+            message:"Email not Verified ,verify your Email first ! "
          })
       };
 
@@ -801,6 +806,79 @@ export const newProfileImage=async(req,res)=>{
     return res.status(500).json({
       status:false,
       message:"Internal Server error "
+    })
+  }
+};
+
+
+export const deleteUser=async(req,res)=>{
+  try {
+    const id=req.user.id;
+    if(!id){
+      return res.status(403).json({
+        status:false,
+        message:"User is not authorized ! "
+      })
+    }
+
+   const user=await userModel.findById(id);
+   if(!user){
+    return res.status(404).json({
+      status:false,
+      message:"USer does not Exist"
+    })
+   }
+   const profileImg=user.profileImage?.public_id
+
+   if(profileImg){
+    await cloudinary.uploader.destroy(profileImg);
+   }
+
+   const userPosts =await postModel.find({author:id});
+   
+    for (const post of userPosts){ // going on every post of userPosts
+      const oldCoverImageId=post.coverImage?.public_id;
+
+      if(oldCoverImageId){
+        await cloudinary.uploader.destroy(oldCoverImageId);
+      }
+    }
+
+    const postIds=userPosts.map(post => post._id);
+
+    await postModel.deleteMany({author:id});
+
+    await bookmarkModel.deleteMany({post:{$in:postIds}});
+    await bookmarkModel.deleteMany({user:id});
+
+    await likeModel.deleteMany({post:{$in:postIds}});
+    await likeModel.deleteMany({user:id});
+
+    await commentModel.deleteMany({post:{$in:postIds}});
+    await commentModel.deleteMany({author:id});
+
+    await otpModel.deleteMany({user:id});
+    await sessionModel.deleteMany({userId:id});
+
+    await user.deleteOne();
+
+    res.clearCookie("refreshToken",{
+      httpOnly:true,
+      secure:process.env.NODE_ENV==="production",
+      sameSite:process.env.NODE_ENV==="production"?"none":"strict",
+
+    });
+
+    return res.status(200).json({
+      status:true,
+      message:"Account deleted Successfully "
+    })
+
+} catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      status:false,
+      message:"Internal Server Error"
     })
   }
 }
